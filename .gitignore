@@ -1,0 +1,12 @@
+# Build directory
+build/
+cmake-build-*/
+.cache/
+
+# OS files
+.DS_Store
+
+# Temporary files
+*.tmp
+*.wav
+staged_*.wav
