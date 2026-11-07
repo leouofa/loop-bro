@@ -282,8 +282,22 @@ bool testOscBridgeWorkflow()
     // Disarm message while recording should finalize capture early into Captured state
     osc->oscMessageReceived(disarmMsg);
     inBuf.clear();
-    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    for (int b = 0; b < 50; ++b)
+        proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
     ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Captured);
+
+    // 5. Test Re-Arm from Captured State with Silence
+    // User clicks ARM again in M4L
+    osc->oscMessageReceived(armMsg);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    std::cout << "State after re-arm (after 50 blocks silence): " << static_cast<int>(proc.getCaptureEngine().getState()) << std::endl;
+    std::cout << "Envelope dB after re-arm: " << proc.getCaptureEngine().getCurrentEnvelopeDb() << std::endl;
+
+    for (int b = 0; b < 10; ++b)
+    {
+        proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+        std::cout << "Block " << b << " state: " << static_cast<int>(proc.getCaptureEngine().getState()) << std::endl;
+    }
 
     std::cout << "[PASSED] testOscBridgeWorkflow" << std::endl;
     return true;
