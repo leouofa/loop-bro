@@ -263,8 +263,12 @@ void LoopBroAudioProcessorEditor::timerCallback()
         if (engine.copyCapturedAudio(temp))
         {
             waveformDisplay.updateWaveform(temp, temp.getNumSamples(), sr);
-            auto stagedFile = WavExporter::stageTempWavFile(temp, sr);
-            processorRef.setStagedWavFile(stagedFile);
+            auto stagedFile = processorRef.getStagedWavFile();
+            if (!stagedFile.existsAsFile())
+            {
+                stagedFile = WavExporter::stageTempWavFile(temp, sr);
+                processorRef.setStagedWavFile(stagedFile);
+            }
             waveformDisplay.setStagedFile(stagedFile);
         }
     }

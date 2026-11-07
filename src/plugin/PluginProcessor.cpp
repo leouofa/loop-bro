@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "OscBridge.h"
 #include "../ui/PluginEditor.h"
 
 namespace loopbro
@@ -16,10 +17,21 @@ LoopBroAudioProcessor::LoopBroAudioProcessor()
     stopHoldParam       = apvts.getRawParameterValue(ParameterIDs::stopHoldMs.getParamID());
     loopGainParam       = apvts.getRawParameterValue(ParameterIDs::loopGainDb.getParamID());
     inputThruParam      = apvts.getRawParameterValue(ParameterIDs::inputThru.getParamID());
+
+    oscBridge = std::make_unique<OscBridge>(*this, captureEngine, apvts);
+    oscBridge->start();
 }
 
 LoopBroAudioProcessor::~LoopBroAudioProcessor()
 {
+    if (oscBridge != nullptr)
+        oscBridge->stop();
+    oscBridge.reset();
+}
+
+OscBridge* LoopBroAudioProcessor::getOscBridge() noexcept
+{
+    return oscBridge.get();
 }
 
 const juce::String LoopBroAudioProcessor::getName() const

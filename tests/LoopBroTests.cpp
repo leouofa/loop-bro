@@ -8,6 +8,8 @@
 #include "../src/dsp/PreRollRingBuffer.h"
 #include "../src/dsp/CaptureEngine.h"
 #include "../src/plugin/WavExporter.h"
+#include "../src/plugin/PluginProcessor.h"
+#include "../src/plugin/OscBridge.h"
 
 #define ASSERT_TRUE(cond) \
     do { \
@@ -221,8 +223,90 @@ bool testWavExport()
     return true;
 }
 
+bool testOscBridgeWorkflow()
+{
+    std::cout << "[RUNNING] testOscBridgeWorkflow..." << std::endl;
+    loopbro::LoopBroAudioProcessor proc;
+    proc.prepareToPlay(44100.0, 512);
+
+    auto* osc = proc.getOscBridge();
+    ASSERT_TRUE(osc != nullptr);
+
+    juce::AudioBuffer<float> inBuf(2, 512);
+    juce::AudioBuffer<float> outBuf(2, 512);
+    loopbro::CaptureSettings settings;
+
+    // 1. Test Arm via OSC Message
+    juce::OSCMessage armMsg(juce::OSCAddressPattern("/loopbro/arm"), 1);
+    osc->oscMessageReceived(armMsg);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Armed);
+
+    // 2. Test Disarm via OSC Message
+    juce::OSCMessage disarmMsg(juce::OSCAddressPattern("/loopbro/arm"), 0);
+    osc->oscMessageReceived(disarmMsg);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Idle);
+
+    // 3. Test Parameter updates via OSC
+    juce::OSCMessage paramMsg1(juce::OSCAddressPattern("/loopbro/param/startThresholdDb"), -24.5f);
+    osc->oscMessageReceived(paramMsg1);
+    auto* p1 = proc.getAPVTS().getRawParameterValue("startThresholdDb");
+    ASSERT_TRUE(p1 != nullptr);
+    ASSERT_NEAR(p1->load(), -24.5f, 0.2f);
+
+    juce::OSCMessage paramMsg2(juce::OSCAddressPattern("/loopbro/param/preRollMs"), 150.0f);
+    osc->oscMessageReceived(paramMsg2);
+    auto* p2 = proc.getAPVTS().getRawParameterValue("preRollMs");
+    ASSERT_TRUE(p2 != nullptr);
+    ASSERT_NEAR(p2->load(), 150.0f, 1.0f);
+
+    juce::OSCMessage paramMsg3(juce::OSCAddressPattern("/loopbro/param/inputThru"), 0.0f);
+    osc->oscMessageReceived(paramMsg3);
+    auto* p3 = proc.getAPVTS().getRawParameterValue("inputThru");
+    ASSERT_TRUE(p3 != nullptr);
+    ASSERT_TRUE(p3->load() < 0.5f);
+
+    // 4. Test Early Capture Stop via OSC Disarm during Recording
+    osc->oscMessageReceived(armMsg);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Armed);
+
+    // Trigger recording by feeding loud audio
+    inBuf.clear();
+    for (int i = 0; i < 512; ++i) inBuf.setSample(0, i, 0.8f);
+    settings.startThresholdDb = -20.0f;
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Recording);
+
+    // Disarm message while recording should finalize capture early into Captured state
+    osc->oscMessageReceived(disarmMsg);
+    inBuf.clear();
+    for (int b = 0; b < 50; ++b)
+        proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Captured);
+
+    // 5. Test Re-Arm from Captured State with Silence
+    // User clicks ARM again in M4L
+    osc->oscMessageReceived(armMsg);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    std::cout << "State after re-arm (after 50 blocks silence): " << static_cast<int>(proc.getCaptureEngine().getState()) << std::endl;
+    std::cout << "Envelope dB after re-arm: " << proc.getCaptureEngine().getCurrentEnvelopeDb() << std::endl;
+
+    for (int b = 0; b < 10; ++b)
+    {
+        proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+        std::cout << "Block " << b << " state: " << static_cast<int>(proc.getCaptureEngine().getState()) << std::endl;
+    }
+
+    std::cout << "[PASSED] testOscBridgeWorkflow" << std::endl;
+    return true;
+}
+
 int main()
 {
+    juce::ScopedJuceInitialiser_GUI guiInit;
+
     std::cout << "========================================" << std::endl;
     std::cout << "  LOOP BRO DSP & EXPORT UNIT TEST SUITE  " << std::endl;
     std::cout << "========================================" << std::endl;
@@ -231,6 +315,7 @@ int main()
     if (!testPreRollRingBuffer()) return 1;
     if (!testCaptureEngineWorkflow()) return 1;
     if (!testWavExport()) return 1;
+    if (!testOscBridgeWorkflow()) return 1;
 
     std::cout << "All tests passed successfully!" << std::endl;
     return 0;
