@@ -61,7 +61,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         ParameterIDs::inputThru,
         "Input Thru",
-        true));
+        false));
 
     return { params.begin(), params.end() };
 }

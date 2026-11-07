@@ -232,6 +232,11 @@ bool testOscBridgeWorkflow()
     auto* osc = proc.getOscBridge();
     ASSERT_TRUE(osc != nullptr);
 
+    // Initial default: inputThru must be false (OFF)
+    auto* initialThru = proc.getAPVTS().getRawParameterValue("inputThru");
+    ASSERT_TRUE(initialThru != nullptr);
+    ASSERT_TRUE(initialThru->load() < 0.5f);
+
     juce::AudioBuffer<float> inBuf(2, 512);
     juce::AudioBuffer<float> outBuf(2, 512);
     loopbro::CaptureSettings settings;
@@ -282,21 +287,20 @@ bool testOscBridgeWorkflow()
     // Disarm message while recording should finalize capture early into Captured state
     osc->oscMessageReceived(disarmMsg);
     inBuf.clear();
-    for (int b = 0; b < 50; ++b)
-        proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
     ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Captured);
 
-    // 5. Test Re-Arm from Captured State with Silence
-    // User clicks ARM again in M4L
+    // 5. Test Immediate Re-Arm from Captured State with Silence
+    // User clicks ARM again in M4L immediately: must reset envelope to -100 dB and stay Armed
     osc->oscMessageReceived(armMsg);
     proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
-    std::cout << "State after re-arm (after 50 blocks silence): " << static_cast<int>(proc.getCaptureEngine().getState()) << std::endl;
-    std::cout << "Envelope dB after re-arm: " << proc.getCaptureEngine().getCurrentEnvelopeDb() << std::endl;
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Armed);
+    ASSERT_NEAR(proc.getCaptureEngine().getCurrentEnvelopeDb(), -100.0f, 1.0f);
 
     for (int b = 0; b < 10; ++b)
     {
         proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
-        std::cout << "Block " << b << " state: " << static_cast<int>(proc.getCaptureEngine().getState()) << std::endl;
+        ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Armed);
     }
 
     std::cout << "[PASSED] testOscBridgeWorkflow" << std::endl;

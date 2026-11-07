@@ -295,6 +295,7 @@ def generate_amxd():
                         "parameter_type": 0,
                         "parameter_mmin": -80.0,
                         "parameter_mmax": 0.0,
+                        "parameter_initial_enable": 1,
                         "parameter_initial": -30.0,
                         "parameter_unitstyle": 4
                     }
@@ -321,6 +322,7 @@ def generate_amxd():
                         "parameter_type": 0,
                         "parameter_mmin": -80.0,
                         "parameter_mmax": 0.0,
+                        "parameter_initial_enable": 1,
                         "parameter_initial": -48.0,
                         "parameter_unitstyle": 4
                     }
@@ -347,6 +349,7 @@ def generate_amxd():
                         "parameter_type": 0,
                         "parameter_mmin": 0.0,
                         "parameter_mmax": 2000.0,
+                        "parameter_initial_enable": 1,
                         "parameter_initial": 50.0,
                         "parameter_unitstyle": 2
                     }
@@ -373,6 +376,7 @@ def generate_amxd():
                         "parameter_type": 0,
                         "parameter_mmin": 50.0,
                         "parameter_mmax": 10000.0,
+                        "parameter_initial_enable": 1,
                         "parameter_initial": 500.0,
                         "parameter_unitstyle": 2
                     }
@@ -399,6 +403,7 @@ def generate_amxd():
                         "parameter_type": 0,
                         "parameter_mmin": -60.0,
                         "parameter_mmax": 6.0,
+                        "parameter_initial_enable": 1,
                         "parameter_initial": 0.0,
                         "parameter_unitstyle": 4
                     }
@@ -413,13 +418,24 @@ def generate_amxd():
     add_line("obj_route_osc", 9, "obj_set_level", 0)
     add_line("obj_set_level", 0, "obj_dial_level", 0)
 
-    # 6. Live Thru toggle
+    # 6. Live Thru toggle (default OFF / 0)
     add_box("obj_btn_thru", "live.text", "", [30.0, 640.0, 75.0, 20.0],
             presentation=1, pres_rect=[10.0, 122.0, 80.0, 22.0],
             extra={
                 "text": "THRU OFF", "texton": "THRU ON", "mode": 1,
                 "bgoncolor": [0.04, 0.52, 1.0, 1.0],
-                "activebgoncolor": [0.04, 0.52, 1.0, 1.0]
+                "activebgoncolor": [0.04, 0.52, 1.0, 1.0],
+                "parameter_enable": 1,
+                "saved_attribute_attributes": {
+                    "valueof": {
+                        "parameter_shortname": "Live Thru",
+                        "parameter_longname": "Live Thru",
+                        "parameter_type": 2,
+                        "parameter_mmax": 1.0,
+                        "parameter_initial_enable": 1,
+                        "parameter_initial": 0.0
+                    }
+                }
             })
     add_box("obj_msg_param_thru", "newobj", "prepend /loopbro/param/inputThru", [30.0, 670.0, 185.0, 22.0])
     add_line("obj_btn_thru", 0, "obj_msg_param_thru", 0)
