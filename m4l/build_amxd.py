@@ -226,8 +226,22 @@ def generate_amxd():
                 "text": "ARM", "texton": "DISARM", "mode": 1,
                 "bgoncolor": [1.0, 0.6, 0.0, 1.0],
                 "activebgoncolor": [1.0, 0.6, 0.0, 1.0],
+                "parameter_enable": 1,
+                "varname": "Arm/Disarm",
                 "annotation_name": "Arm / Disarm Recording",
-                "annotation": "Arms Loop Bro for automatic threshold-based audio recording. When armed, recording triggers automatically as soon as your guitar signal exceeds the Start Threshold. Pressing while recording immediately stops capture and finalizes the riff."
+                "annotation": "Arms Loop Bro for automatic threshold-based audio recording. When armed, recording triggers automatically as soon as your guitar signal exceeds the Start Threshold. Pressing while recording immediately stops capture and finalizes the riff.",
+                "saved_attribute_attributes": {
+                    "valueof": {
+                        "parameter_shortname": "Arm",
+                        "parameter_longname": "Arm/Disarm",
+                        "parameter_type": 2,
+                        "parameter_mmax": 1.0,
+                        "parameter_enum": ["Disarmed", "Armed"],
+                        "parameter_initial_enable": 1,
+                        "parameter_initial": [0.0],
+                        "parameter_linknames": 1
+                    }
+                }
             })
     add_box("obj_msg_arm", "newobj", "prepend /loopbro/arm", [30.0, 370.0, 130.0, 22.0])
     add_line("obj_btn_arm", 0, "obj_msg_arm", 0)
@@ -240,8 +254,22 @@ def generate_amxd():
                 "text": "PLAY LOOP", "texton": "STOP LOOP", "mode": 1,
                 "bgoncolor": [0.2, 0.8, 0.35, 1.0],
                 "activebgoncolor": [0.2, 0.8, 0.35, 1.0],
+                "parameter_enable": 1,
+                "varname": "Play/Stop Loop",
                 "annotation_name": "Play / Stop Loop",
-                "annotation": "Starts or stops playback of the captured audio loop. Plays back seamlessly and synchronized with Ableton Live's transport."
+                "annotation": "Starts or stops playback of the captured audio loop. Plays back seamlessly and synchronized with Ableton Live's transport.",
+                "saved_attribute_attributes": {
+                    "valueof": {
+                        "parameter_shortname": "Loop",
+                        "parameter_longname": "Play/Stop Loop",
+                        "parameter_type": 2,
+                        "parameter_mmax": 1.0,
+                        "parameter_enum": ["Stopped", "Playing"],
+                        "parameter_initial_enable": 1,
+                        "parameter_initial": [0.0],
+                        "parameter_linknames": 1
+                    }
+                }
             })
     add_box("obj_msg_play", "newobj", "prepend /loopbro/play", [100.0, 370.0, 130.0, 22.0])
     add_line("obj_btn_play", 0, "obj_msg_play", 0)
@@ -254,8 +282,22 @@ def generate_amxd():
                 "text": "CLEAR", "mode": 0,
                 "bgcolor": [0.35, 0.16, 0.18, 1.0],
                 "textcolor": [1.0, 0.45, 0.45, 1.0],
+                "parameter_enable": 1,
+                "varname": "Clear Loop",
                 "annotation_name": "Clear Captured Loop",
-                "annotation": "Discards the currently captured audio riff buffer and returns the engine to the Idle state, freeing memory for a new take."
+                "annotation": "Discards the currently captured audio riff buffer and returns the engine to the Idle state, freeing memory for a new take.",
+                "saved_attribute_attributes": {
+                    "valueof": {
+                        "parameter_shortname": "Clear",
+                        "parameter_longname": "Clear Loop",
+                        "parameter_type": 2,
+                        "parameter_mmax": 1.0,
+                        "parameter_enum": ["Inactive", "Clear"],
+                        "parameter_initial_enable": 1,
+                        "parameter_initial": [0.0],
+                        "parameter_linknames": 1
+                    }
+                }
             })
     add_box("obj_msg_clear", "message", "/loopbro/clear", [170.0, 370.0, 95.0, 22.0])
     add_line("obj_btn_clear", 0, "obj_msg_clear", 0)
@@ -318,6 +360,7 @@ def generate_amxd():
             presentation=1, pres_rect=[10.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "varname": "Start Threshold",
                 "annotation_name": "Start Threshold",
                 "annotation": "Sets the input audio level in dB required to trigger automatic recording when armed. Set this comfortably above ambient pickup noise and cable hum, but low enough to catch delicate picking attacks.",
                 "saved_attribute_attributes": {
@@ -329,7 +372,8 @@ def generate_amxd():
                         "parameter_mmax": 0.0,
                         "parameter_initial_enable": 1,
                         "parameter_initial": -30.0,
-                        "parameter_unitstyle": 4
+                        "parameter_unitstyle": 4,
+                        "parameter_linknames": 1
                     }
                 }
             })
@@ -347,6 +391,7 @@ def generate_amxd():
             presentation=1, pres_rect=[57.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "varname": "Stop Threshold",
                 "annotation_name": "Stop Threshold",
                 "annotation": "Sets the input audio drop-off level in dB that signals the end of your playing phrase. When audio falls below this level for the Stop Hold duration, recording concludes automatically.",
                 "saved_attribute_attributes": {
@@ -358,7 +403,8 @@ def generate_amxd():
                         "parameter_mmax": 0.0,
                         "parameter_initial_enable": 1,
                         "parameter_initial": -48.0,
-                        "parameter_unitstyle": 4
+                        "parameter_unitstyle": 4,
+                        "parameter_linknames": 1
                     }
                 }
             })
@@ -376,6 +422,7 @@ def generate_amxd():
             presentation=1, pres_rect=[104.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "varname": "Pre-Roll Time",
                 "annotation_name": "Pre-Roll Buffer Time",
                 "annotation": "Amount of buffered audio (in milliseconds) captured prior to crossing the Start Threshold. Preserves the initial pick transient and attack of the first note without clipping.",
                 "saved_attribute_attributes": {
@@ -387,7 +434,8 @@ def generate_amxd():
                         "parameter_mmax": 2000.0,
                         "parameter_initial_enable": 1,
                         "parameter_initial": 50.0,
-                        "parameter_unitstyle": 2
+                        "parameter_unitstyle": 2,
+                        "parameter_linknames": 1
                     }
                 }
             })
@@ -405,6 +453,7 @@ def generate_amxd():
             presentation=1, pres_rect=[151.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "varname": "Stop Hold Time",
                 "annotation_name": "Stop Hold Duration",
                 "annotation": "The duration (in milliseconds) the input signal must remain below the Stop Threshold before recording stops. Prevents premature loop termination during brief rests, pauses, or ringing chord decay.",
                 "saved_attribute_attributes": {
@@ -416,7 +465,8 @@ def generate_amxd():
                         "parameter_mmax": 10000.0,
                         "parameter_initial_enable": 1,
                         "parameter_initial": 500.0,
-                        "parameter_unitstyle": 2
+                        "parameter_unitstyle": 2,
+                        "parameter_linknames": 1
                     }
                 }
             })
@@ -434,6 +484,7 @@ def generate_amxd():
             presentation=1, pres_rect=[198.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "varname": "Loop Level",
                 "annotation_name": "Loop Playback Level",
                 "annotation": "Adjusts playback volume (in dB) of the captured loop relative to your live guitar signal.",
                 "saved_attribute_attributes": {
@@ -445,7 +496,8 @@ def generate_amxd():
                         "parameter_mmax": 6.0,
                         "parameter_initial_enable": 1,
                         "parameter_initial": 0.0,
-                        "parameter_unitstyle": 4
+                        "parameter_unitstyle": 4,
+                        "parameter_linknames": 1
                     }
                 }
             })
@@ -466,16 +518,19 @@ def generate_amxd():
                 "bgoncolor": [0.04, 0.52, 1.0, 1.0],
                 "activebgoncolor": [0.04, 0.52, 1.0, 1.0],
                 "parameter_enable": 1,
+                "varname": "Live Through",
                 "annotation_name": "Live Audio Thru",
                 "annotation": "Toggles dry input signal pass-through monitoring in the Loop Bro engine. Turn ON when monitoring directly through the plugin, or OFF when using Ableton track monitoring.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Live Thru",
-                        "parameter_longname": "Live Thru",
+                        "parameter_longname": "Live Through",
                         "parameter_type": 2,
                         "parameter_mmax": 1.0,
+                        "parameter_enum": ["Off", "On"],
                         "parameter_initial_enable": 1,
-                        "parameter_initial": 0.0
+                        "parameter_initial": [0.0],
+                        "parameter_linknames": 1
                     }
                 }
             })
@@ -487,6 +542,10 @@ def generate_amxd():
     add_box("obj_set_thru", "newobj", "prepend set", [850.0, 110.0, 75.0, 22.0])
     add_line("obj_route_osc", 10, "obj_set_thru", 0)
     add_line("obj_set_thru", 0, "obj_btn_thru", 0)
+
+    # Push 3 Parameter Banks Object
+    add_box("obj_live_banks", "newobj", "live.banks", [380.0, 640.0, 65.0, 22.0],
+            extra={"numoutlets": 1, "outlettype": [""]})
 
     # Sync Button & Loadbang
     add_box("obj_btn_sync", "live.text", "", [120.0, 640.0, 60.0, 20.0],
@@ -514,6 +573,49 @@ def generate_amxd():
                 "annotation_name": "OSC Communication Ports",
                 "annotation": "Displays the UDP network ports used for bidirectional communication with Loop Bro (Port 9001: M4L -> Plugin; Port 9002: Plugin -> M4L)."
             })
+
+    patcher["patcher"]["parameters"] = {
+        "obj_btn_arm": ["Arm/Disarm", "Arm", 0],
+        "obj_btn_play": ["Play/Stop Loop", "Loop", 0],
+        "obj_btn_clear": ["Clear Loop", "Clear", 0],
+        "obj_dial_start": ["Start Threshold", "Start Thr", 0],
+        "obj_dial_stop": ["Stop Threshold", "Stop Thr", 0],
+        "obj_dial_preroll": ["Pre-Roll Time", "Pre-Roll", 0],
+        "obj_dial_stophold": ["Stop Hold Time", "Stop Hold", 0],
+        "obj_dial_level": ["Loop Level", "Loop Lvl", 0],
+        "obj_btn_thru": ["Live Through", "Live Thru", 0],
+        "parameterbanks": {
+            "0": {
+                "index": 0,
+                "name": "Main",
+                "parameters": [
+                    "Arm/Disarm",
+                    "Play/Stop Loop",
+                    "Clear Loop",
+                    "Start Threshold",
+                    "Stop Threshold",
+                    "Pre-Roll Time",
+                    "Stop Hold Time",
+                    "Loop Level"
+                ]
+            },
+            "1": {
+                "index": 1,
+                "name": "Monitoring",
+                "parameters": [
+                    "Live Through",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    "-"
+                ]
+            }
+        },
+        "inherited_shortname": 1
+    }
 
     return patcher
 
