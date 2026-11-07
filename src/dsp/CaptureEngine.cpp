@@ -94,6 +94,9 @@ void CaptureEngine::handleCommands()
         playbackReadPos.store(0, std::memory_order_release);
         recordingSamplesCount.store(0, std::memory_order_release);
         belowStopCounterSamples = 0;
+        envelopeFollower.reset();
+        currentEnvelopeDb.store(-100.0f, std::memory_order_relaxed);
+        preRollBuffer.reset();
     }
 
     if (cmdDisarmFlag.exchange(false, std::memory_order_acquire))
