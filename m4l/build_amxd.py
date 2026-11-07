@@ -224,6 +224,7 @@ def generate_amxd():
             presentation=1, pres_rect=[10.0, 32.0, 72.0, 22.0],
             extra={
                 "text": "ARM", "texton": "DISARM", "mode": 1,
+                "automation": "Disarmed", "automationon": "Armed",
                 "bgoncolor": [1.0, 0.6, 0.0, 1.0],
                 "activebgoncolor": [1.0, 0.6, 0.0, 1.0],
                 "parameter_enable": 1,
@@ -252,6 +253,7 @@ def generate_amxd():
             presentation=1, pres_rect=[86.0, 32.0, 78.0, 22.0],
             extra={
                 "text": "PLAY LOOP", "texton": "STOP LOOP", "mode": 1,
+                "automation": "Stopped", "automationon": "Playing",
                 "bgoncolor": [0.2, 0.8, 0.35, 1.0],
                 "activebgoncolor": [0.2, 0.8, 0.35, 1.0],
                 "parameter_enable": 1,
@@ -280,6 +282,7 @@ def generate_amxd():
             presentation=1, pres_rect=[168.0, 32.0, 72.0, 22.0],
             extra={
                 "text": "CLEAR", "mode": 0,
+                "automation": "Inactive", "automationon": "Clear",
                 "bgcolor": [0.35, 0.16, 0.18, 1.0],
                 "textcolor": [1.0, 0.45, 0.45, 1.0],
                 "parameter_enable": 1,
@@ -515,6 +518,7 @@ def generate_amxd():
             presentation=1, pres_rect=[10.0, 122.0, 80.0, 22.0],
             extra={
                 "text": "THRU OFF", "texton": "THRU ON", "mode": 1,
+                "automation": "Off", "automationon": "On",
                 "bgoncolor": [0.04, 0.52, 1.0, 1.0],
                 "activebgoncolor": [0.04, 0.52, 1.0, 1.0],
                 "parameter_enable": 1,
