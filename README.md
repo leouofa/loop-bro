@@ -11,6 +11,8 @@ Loop Bro is designed for guitarists who want hands-free riff capture: plug your 
 - **Hands-Free Auto-Capture**: Armed state continuously monitors input signal using a fast-attack envelope follower. The moment amplitude crosses `Start Threshold`, recording triggers immediately.
 - **Configurable Pre-Roll Ring Buffer (`0–2000 ms`)**: Never misses the pick attack transient or slide-in. Pre-roll audio is prepended with a smooth 3 ms raised-cosine fade-in to eliminate starting clicks.
 - **Automatic Tail Trimming with Anti-Click Fade**: When amplitude stays below `Stop Threshold` for `Stop Hold ms`, Loop Bro stops recording, automatically trims off the trailing silence, and applies a 15 ms cosine fade-out over natural decay.
+- **Early Stop Capture**: Disarming while recording automatically finalizes and trims the take cleanly with anti-click crossfades, giving you immediate manual control when you don't want to wait for ring-out.
+- **Clean Re-Arm Protection**: Dynamic reset of envelope followers, pre-roll buffers, and cached levels when arming prevents lingering decay tails from falsely triggering new captures.
 - **Single-Slot Disarm Workflow**: Automatically disarms upon take completion into a single clip slot so you can loop, audition, or export without accidental re-triggers.
 - **Free-Length Looper**: Audition and loop your riff at full fidelity independent of DAW tempo or transport.
 - **Drag-to-DAW & 24-bit WAV Export**: Drag the captured riff directly from the waveform display onto an Ableton, Logic, Reaper, Studio One, or Bitwig track, or click **Save WAV...** to export anywhere.
@@ -28,7 +30,7 @@ Loop Bro is designed for guitarists who want hands-free riff capture: plug your 
 | **Pre-Roll** | `0 ms` to `2000 ms` | `50 ms` | Duration of audio prior to the trigger to prepend to the clip. |
 | **Stop Hold** | `50 ms` to `10000 ms` | `500 ms` | How long amplitude must remain below Stop Threshold before finishing recording. |
 | **Loop Level** | `-60.0 dB` to `+6.0 dB` | `0.0 dB` | Playback gain for the looped audio take. |
-| **Live Thru** | `On / Off` | `On` | Monitors live guitar input through the plugin output. |
+| **Live Thru** | `On / Off` | `Off` | Monitors live guitar input through the plugin output. |
 
 ---
 
@@ -38,6 +40,7 @@ Loop Bro is designed for guitarists who want hands-free riff capture: plug your 
 - macOS 12+ (Apple Silicon or Intel)
 - CMake 3.22+ (`brew install cmake`)
 - Xcode or Apple Command Line Tools (`xcode-select --install`)
+- Python 3.8+ (for building the Max for Live device)
 
 ### Building from Source
 ```bash
@@ -88,13 +91,19 @@ Loop Bro includes a dedicated Max for Live Audio Effect device: **`LoopBroContro
 - **Dual Soundwave Visualization (Split Side-by-Side)**:
   - **Captured Riff Waveform**: Real-time waveform display of the recorded take loaded into `buffer~` / `waveform~` with a synchronized playhead cursor.
   - **Live Audio Oscilloscope**: Real-time scrolling waveform monitor (`live.scope~`) fed directly from incoming/outgoing guitar audio.
-- **Bi-Directional Parameter Control**:
+- **Bi-Directional Parameter Control & Startup Synchronization**:
   - Live dials and toggles for `Start Threshold`, `Stop Threshold`, `Pre-Roll`, `Stop Hold`, `Loop Level`, and `Live Thru`.
   - Transport controls: `ARM`, `PLAY LOOP`, and `CLEAR`.
+  - **Dynamic ARM / STOP REC Button**: Transforms into `STOP REC` during active recording to allow manual early take completion with anti-click fades, and automatically disarms when recording completes.
+  - Initialized parameter defaults to prevent zero-jump desynchronization when inserting the device into an active set.
   - Automatic two-way synchronization between Loop Bro GUI and M4L dials.
+- **Ableton Info View Text Hints**:
+  - Comprehensive native Ableton Info View annotations across all dials, toggles, buttons, waveform display, and live oscilloscope.
+  - Instant guitar-centric calibration advice and workflow hints visible in Live's lower-left Info View panel on hover.
 - **Zero-Configuration Local OSC**:
   - M4L &rarr; VST: UDP port `9001` (`/loopbro/arm`, `/loopbro/play`, `/loopbro/clear`, `/loopbro/param/*`, `/loopbro/query`)
   - VST &rarr; M4L: UDP port `9002` (`/loopbro/state`, `/loopbro/playhead`, `/loopbro/meter`, `/loopbro/waveform/file`, `/loopbro/param/*`)
+  - Headless background audio take staging: WAV files are immediately staged and broadcast over OSC even with the VST plugin window closed.
 
 ### Setup in Ableton Live
 1. Insert **Loop Bro (VST3 or AU)** on an audio track.
@@ -102,4 +111,11 @@ Loop Bro includes a dedicated Max for Live Audio Effect device: **`LoopBroContro
    - The device is pre-installed to: `~/Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/LoopBroControl.amxd`
    - Or drag `m4l/LoopBroControl.amxd` directly from the repository into your track.
 3. Everything synchronizes automatically on insert via `/loopbro/query`!
+
+### Building the M4L Device
+To regenerate or rebuild the binary `.amxd` file from source:
+```bash
+python3 m4l/build_amxd.py
+```
+This builds `m4l/LoopBroControl.amxd` and automatically installs it to your Ableton User Library presets directory if present.
 
