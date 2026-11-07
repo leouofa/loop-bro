@@ -83,39 +83,106 @@ auval -v aufx LpBr LpBr
 
 ---
 
-## Max for Live (M4L) Integration 🎛️
+## Ableton Live & Push 3 Integration 🎛️
 
-Loop Bro includes a dedicated Max for Live Audio Effect device: **`LoopBroControl.amxd`**.
+Loop Bro includes deep, native integration for **Ableton Live 11/12** and the **Ableton Push 3 controller** (in both Controller and Standalone modes) via its companion Max for Live audio device: **`LoopBroControl.amxd`**.
 
-### Features
-- **Dual Soundwave Visualization (Split Side-by-Side)**:
-  - **Captured Riff Waveform**: Real-time waveform display of the recorded take loaded into `buffer~` / `waveform~` with a synchronized playhead cursor.
-  - **Live Audio Oscilloscope**: Real-time scrolling waveform monitor (`live.scope~`) fed directly from incoming/outgoing guitar audio.
-- **Bi-Directional Parameter Control & Startup Synchronization**:
-  - Live dials and toggles for `Start Threshold`, `Stop Threshold`, `Pre-Roll`, `Stop Hold`, `Loop Level`, and `Live Thru`.
-  - Transport controls: `ARM`, `PLAY LOOP`, and `CLEAR`.
-  - **Dynamic ARM / STOP REC Button**: Transforms into `STOP REC` during active recording to allow manual early take completion with anti-click fades, and automatically disarms when recording completes.
-  - Initialized parameter defaults to prevent zero-jump desynchronization when inserting the device into an active set.
-  - Automatic two-way synchronization between Loop Bro GUI and M4L dials.
-- **Ableton Info View Text Hints**:
-  - Comprehensive native Ableton Info View annotations across all dials, toggles, buttons, waveform display, and live oscilloscope.
-  - Instant guitar-centric calibration advice and workflow hints visible in Live's lower-left Info View panel on hover.
-- **Zero-Configuration Local OSC**:
-  - M4L &rarr; VST: UDP port `9001` (`/loopbro/arm`, `/loopbro/play`, `/loopbro/clear`, `/loopbro/param/*`, `/loopbro/query`)
-  - VST &rarr; M4L: UDP port `9002` (`/loopbro/state`, `/loopbro/playhead`, `/loopbro/meter`, `/loopbro/waveform/file`, `/loopbro/param/*`)
-  - Headless background audio take staging: WAV files are immediately staged and broadcast over OSC even with the VST plugin window closed.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ Ableton Audio Track                                                    │
+│                                                                        │
+│   Guitar In ──► [ Loop Bro (VST3/AU) ] ──► [ LoopBroControl.amxd ] ──► │
+│                         ▲                          ▲                   │
+│                         │   UDP 9001 (Control)     │                   │
+│                         └──────────────────────────┤                   │
+│                             UDP 9002 (Wave/State)  │                   │
+│                                                    ▼                   │
+│                                           [ Ableton Push 3 ]           │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Ableton Push 3 Controller Support
+
+`LoopBroControl.amxd` includes custom parameter bank definitions (`live.banks`) tailor-made for Push 3's 8 rotary encoders and high-resolution screen. Parameters feature contextual hardware names and clear state labels (no generic `val1`/`val2` or truncated identifiers).
+
+#### Bank 1: "Main" (Core Performance & Detection)
+Bank 1 maps all 8 Push rotary encoders to the primary recording, playback, and DSP detection parameters:
+
+| Push Encoder | Parameter Name | Hardware Short Name | Value Range / States | Description |
+|:---:|:---|:---|:---|:---|
+| **1** | **`Arm/Disarm`** | `Arm` | `Disarmed` / `Armed` | Arms the engine for auto-strum recording; turns to `STOP REC` during capture. |
+| **2** | **`Play/Stop Loop`** | `Loop` | `Stopped` / `Playing` | Starts or stops playback of the captured guitar riff. |
+| **3** | **`Clear Loop`** | `Clear` | `Inactive` / `Clear` | Discards current riff buffer and resets engine to Idle. |
+| **4** | **`Start Threshold`** | `Start Thr` | `-80.0 dB` to `0.0 dB` | Input level that triggers automatic recording on first pick attack. |
+| **5** | **`Stop Threshold`** | `Stop Thr` | `-80.0 dB` to `0.0 dB` | Level below which signal must drop to initiate end of phrase. |
+| **6** | **`Pre-Roll Time`** | `Pre-Roll` | `0 ms` to `2000 ms` | Audio prepended from the ring buffer to preserve the first transient. |
+| **7** | **`Stop Hold Time`** | `Stop Hold` | `50 ms` to `10000 ms` | Duration amplitude must stay below Stop Threshold before finishing. |
+| **8** | **`Loop Level`** | `Loop Lvl` | `-60.0 dB` to `+6.0 dB` | Volume of the looping take relative to dry guitar. |
+
+#### Bank 2: "Monitoring" (Signal Routing)
+Access Bank 2 on Push 3 by pressing the upper display bank button above the device:
+
+| Push Encoder | Parameter Name | Hardware Short Name | Value Range / States | Description |
+|:---:|:---|:---|:---|:---|
+| **1** | **`Live Through`** | `Live Thru` | `Off` / `On` | Toggles dry guitar pass-through monitoring inside Loop Bro. |
+| **2–8** | *Unused* | `-` | — | Reserved for future routing expansion. |
+
+---
+
+### Live Device GUI: Dual Waveform Display
+
+In Live's device chain view, `LoopBroControl` presents an elegant dual-visualizer interface:
+
+1. **Captured Riff Waveform**:
+   - Real-time display of the recorded guitar take loaded dynamically into a Max `buffer~` / `waveform~`.
+   - Features a high-contrast yellow playhead cursor showing the synchronized loop playback position and trimmed take boundaries.
+2. **Live Audio Oscilloscope**:
+   - Real-time scrolling waveform monitor (`live.scope~`) tapping directly into incoming and outgoing guitar audio signals via `plugin~` and `plugout~`.
+   - Allows instant visual calibration of pickup output levels against threshold settings.
+3. **Dynamic State Badge & Transport**:
+   - Large colored status badge displaying current engine mode: `IDLE` (amber), `ARMED` (amber), `RECORDING` (red), `CAPTUR` (green), or `PLAY` (green).
+   - One-click `ARM`, `PLAY LOOP`, `CLEAR`, and `SYNC` buttons with auto-disarm safety.
+
+---
+
+### Zero-Configuration OSC Bridge
+
+The VST3/AU plugin and M4L device communicate over bidirectional local UDP network sockets:
+- **Port 9001 (M4L &rarr; Plugin)**: Transmits transport commands (`/loopbro/arm`, `/loopbro/play`, `/loopbro/clear`), parameter dial tweaks (`/loopbro/param/*`), and full-state resync queries (`/loopbro/query`).
+- **Port 9002 (Plugin &rarr; M4L)**: Streams engine states (`/loopbro/state`), playhead positions (`/loopbro/playhead`), dB peak metering (`/loopbro/meter`), and temporary 24-bit take paths (`/loopbro/waveform/file`).
+- **Headless Background Staging**: Takes are exported and transferred to M4L automatically in the background, even when the VST3/AU editor window is closed.
+- **Instant SYNC**: Click the `SYNC` button in the M4L device (or send `/loopbro/query`) at any time to immediately reconcile all parameters and states.
+
+---
 
 ### Setup in Ableton Live
-1. Insert **Loop Bro (VST3 or AU)** on an audio track.
-2. Insert **`LoopBroControl.amxd`** immediately after Loop Bro on the same track.
-   - The device is pre-installed to: `~/Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/LoopBroControl.amxd`
-   - Or drag `m4l/LoopBroControl.amxd` directly from the repository into your track.
-3. Everything synchronizes automatically on insert via `/loopbro/query`!
 
-### Building the M4L Device
-To regenerate or rebuild the binary `.amxd` file from source:
+1. **Insert Loop Bro**:
+   - Drag **Loop Bro** (VST3 or AU) onto an audio track with your guitar input.
+2. **Insert LoopBroControl**:
+   - Drag **`LoopBroControl.amxd`** immediately after Loop Bro in the same track's device chain.
+   - The device is automatically available in Live's browser at:
+     ```
+     User Library > Presets > Audio Effects > Max Audio Effect > LoopBroControl.amxd
+     ```
+3. **Push 3 Operation**:
+   - Select the track on Push 3.
+   - Bank 1 ("Main") is active by default. Use encoders 1–3 to Arm, Play, and Clear, and encoders 4–8 to dial in threshold and timing values.
+   - Press the bank button above the display to switch to Bank 2 ("Monitoring") and toggle `Live Thru`.
+4. **Ableton Info View**:
+   - Hover your mouse over any control or scope in the M4L device to view detailed guitar setup advice and threshold calibration tips directly in Live's lower-left Info View panel.
+
+---
+
+### Building & Deploying the M4L Device
+
+To regenerate the `.amxd` binary file from the Python specification script:
+
 ```bash
 python3 m4l/build_amxd.py
 ```
-This builds `m4l/LoopBroControl.amxd` and automatically installs it to your Ableton User Library presets directory if present.
+
+This compiles `m4l/LoopBroControl.amxd` and automatically installs it to your local Ableton User Library presets directory (`~/Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/LoopBroControl.amxd`).
 
