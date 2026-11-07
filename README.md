@@ -77,3 +77,29 @@ auval -v aufx LpBr LpBr
 5. Stop playing. Once your guitar decays below the stop threshold for your configured **Stop Hold** duration, the plugin stops and displays the trimmed waveform.
 6. Click **PLAY LOOP** to hear your riff looping seamlessly while jamming over it.
 7. Click and drag the **"DRAG TO DAW"** badge or waveform onto any DAW track to drop the 24-bit WAV clip directly into your project!
+
+---
+
+## Max for Live (M4L) Integration 🎛️
+
+Loop Bro includes a dedicated Max for Live Audio Effect device: **`LoopBroControl.amxd`**.
+
+### Features
+- **Dual Soundwave Visualization (Split Side-by-Side)**:
+  - **Captured Riff Waveform**: Real-time waveform display of the recorded take loaded into `buffer~` / `waveform~` with a synchronized playhead cursor.
+  - **Live Audio Oscilloscope**: Real-time scrolling waveform monitor (`live.scope~`) fed directly from incoming/outgoing guitar audio.
+- **Bi-Directional Parameter Control**:
+  - Live dials and toggles for `Start Threshold`, `Stop Threshold`, `Pre-Roll`, `Stop Hold`, `Loop Level`, and `Live Thru`.
+  - Transport controls: `ARM`, `PLAY LOOP`, and `CLEAR`.
+  - Automatic two-way synchronization between Loop Bro GUI and M4L dials.
+- **Zero-Configuration Local OSC**:
+  - M4L &rarr; VST: UDP port `9001` (`/loopbro/arm`, `/loopbro/play`, `/loopbro/clear`, `/loopbro/param/*`, `/loopbro/query`)
+  - VST &rarr; M4L: UDP port `9002` (`/loopbro/state`, `/loopbro/playhead`, `/loopbro/meter`, `/loopbro/waveform/file`, `/loopbro/param/*`)
+
+### Setup in Ableton Live
+1. Insert **Loop Bro (VST3 or AU)** on an audio track.
+2. Insert **`LoopBroControl.amxd`** immediately after Loop Bro on the same track.
+   - The device is pre-installed to: `~/Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/LoopBroControl.amxd`
+   - Or drag `m4l/LoopBroControl.amxd` directly from the repository into your track.
+3. Everything synchronizes automatically on insert via `/loopbro/query`!
+

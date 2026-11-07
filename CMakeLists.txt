@@ -58,6 +58,8 @@ target_sources(LoopBro PRIVATE
     src/plugin/PluginProcessor.cpp
     src/plugin/PluginProcessor.h
     src/plugin/PluginParameters.h
+    src/plugin/OscBridge.cpp
+    src/plugin/OscBridge.h
     src/ui/PluginEditor.cpp
     src/ui/PluginEditor.h
     src/ui/LevelMeterComponent.cpp
@@ -82,6 +84,7 @@ target_link_libraries(LoopBro PRIVATE
     juce::juce_graphics
     juce::juce_events
     juce::juce_data_structures
+    juce::juce_osc
 )
 
 # Automated Test Suite
@@ -89,12 +92,26 @@ enable_testing()
 
 add_executable(LoopBroTests
     tests/LoopBroTests.cpp
+    src/plugin/OscBridge.cpp
+    src/plugin/PluginProcessor.cpp
+    src/ui/PluginEditor.cpp
+    src/ui/LevelMeterComponent.cpp
+    src/ui/WaveformDragComponent.cpp
 )
 
 target_link_libraries(LoopBroTests PRIVATE
     LoopBroDSP
     juce::juce_audio_formats
     juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_graphics
+    juce::juce_events
+    juce::juce_data_structures
+    juce::juce_osc
     juce::juce_core
 )
 

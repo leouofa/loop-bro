@@ -44,6 +44,9 @@ public:
     CaptureEngine& getCaptureEngine() noexcept { return captureEngine; }
     juce::AudioProcessorValueTreeState& getAPVTS() noexcept { return apvts; }
 
+    // OSC Bridge for M4L & external control
+    class OscBridge* getOscBridge() noexcept;
+
     // Path to the currently staged WAV file for Drag-to-DAW
     juce::File getStagedWavFile() const;
     void setStagedWavFile(const juce::File& file);
@@ -67,6 +70,8 @@ private:
     juce::CriticalSection stagedWavLock;
     juce::File currentStagedWav;
     int lastStagedVersion = -1;
+
+    std::unique_ptr<class OscBridge> oscBridge;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopBroAudioProcessor)
 };
