@@ -59,6 +59,10 @@ def generate_amxd():
             box_dict["presentation_rect"] = pres_rect
         if extra:
             box_dict.update(extra)
+            if "annotation_name" in extra and "saved_attribute_attributes" in extra:
+                val = extra["saved_attribute_attributes"].get("valueof", {})
+                if "parameter_annotation_name" not in val:
+                    val["parameter_annotation_name"] = extra["annotation_name"]
         boxes.append({"box": box_dict})
         return id_name
 
@@ -86,7 +90,9 @@ def generate_amxd():
                 "numinlets": 2,
                 "fgcolor": [0.04, 0.85, 1.0, 1.0],
                 "bgcolor": [0.11, 0.12, 0.15, 1.0],
-                "samples": 512
+                "samples": 512,
+                "annotation_name": "Live Audio Scope",
+                "annotation": "Real-time oscilloscope displaying the incoming audio waveform entering the track for visual calibration of signal levels and thresholds."
             })
     add_line("obj_plugin", 0, "obj_scope", 0)
     add_line("obj_plugin", 1, "obj_scope", 1)
@@ -131,7 +137,9 @@ def generate_amxd():
                 "selectcolor": [0.15, 0.35, 0.6, 0.3],
                 "cursorcolor": [1.0, 0.8, 0.1, 0.95],
                 "setmode": 0,
-                "quiet": 1
+                "quiet": 1,
+                "annotation_name": "Captured Riff Waveform",
+                "annotation": "Visual display of the captured audio riff buffer with real-time playback position cursor and trimmed loop boundaries."
             })
 
     # Outlet 3: /loopbro/waveform/file -> replace buffer
@@ -165,22 +173,38 @@ def generate_amxd():
     # Title Label
     add_box("obj_lbl_title", "live.comment", "LOOP BRO CONTROL", [30.0, 300.0, 120.0, 18.0],
             presentation=1, pres_rect=[10.0, 10.0, 130.0, 18.0],
-            extra={"fontname": "Ableton Sans Bold Regular", "fontsize": 11.0, "textcolor": [1.0, 1.0, 1.0, 0.95]})
+            extra={
+                "fontname": "Ableton Sans Bold Regular", "fontsize": 11.0, "textcolor": [1.0, 1.0, 1.0, 0.95],
+                "annotation_name": "Loop Bro Control",
+                "annotation": "Companion Max for Live device for the Loop Bro smart looper. Provides real-time bidirectional OSC control, live audio oscilloscope, captured riff waveform display, and remote transport synchronization."
+            })
 
     # Waveform Section Label
     add_box("obj_lbl_wave", "live.comment", "CAPTURED RIFF", [300.0, 240.0, 120.0, 18.0],
             presentation=1, pres_rect=[254.0, 10.0, 130.0, 18.0],
-            extra={"fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "textcolor": [0.3, 0.7, 1.0, 0.9]})
+            extra={
+                "fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "textcolor": [0.3, 0.7, 1.0, 0.9],
+                "annotation_name": "Captured Riff Waveform",
+                "annotation": "Visual display of the captured audio riff buffer with real-time playback position cursor and trimmed loop boundaries."
+            })
 
     # Scope Section Label
     add_box("obj_lbl_scope", "live.comment", "LIVE SCOPE", [520.0, 240.0, 120.0, 18.0],
             presentation=1, pres_rect=[524.0, 10.0, 130.0, 18.0],
-            extra={"fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "textcolor": [0.04, 0.85, 1.0, 0.9]})
+            extra={
+                "fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "textcolor": [0.04, 0.85, 1.0, 0.9],
+                "annotation_name": "Live Audio Scope",
+                "annotation": "Real-time oscilloscope displaying the incoming audio waveform entering the track for visual calibration of signal levels and thresholds."
+            })
 
     # State Status Badge
     add_box("obj_state_badge", "live.comment", "IDLE", [200.0, 190.0, 90.0, 18.0],
             presentation=1, pres_rect=[148.0, 10.0, 92.0, 18.0],
-            extra={"fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "justification": 1, "textcolor": [1.0, 0.75, 0.1, 1.0]})
+            extra={
+                "fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "justification": 1, "textcolor": [1.0, 0.75, 0.1, 1.0],
+                "annotation_name": "Loop Bro Engine State",
+                "annotation": "Displays the current operational state of the Loop Bro engine:\n• IDLE: Waiting for user action\n• ARMED: Listening for input signal exceeding Start Threshold\n• RECORDING: Actively capturing audio\n• CAPTURED: Loop recording completed and trimmed\n• PLAYING: Loop playback active and synchronized with Live."
+            })
 
     # Outlet 0: /loopbro/state [stateInt, stateStr]
     add_box("obj_unpack_state", "newobj", "unpack 0 s", [200.0, 110.0, 90.0, 22.0],
@@ -201,7 +225,9 @@ def generate_amxd():
             extra={
                 "text": "ARM", "texton": "DISARM", "mode": 1,
                 "bgoncolor": [1.0, 0.6, 0.0, 1.0],
-                "activebgoncolor": [1.0, 0.6, 0.0, 1.0]
+                "activebgoncolor": [1.0, 0.6, 0.0, 1.0],
+                "annotation_name": "Arm / Disarm Recording",
+                "annotation": "Arms Loop Bro for automatic threshold-based audio recording. When armed, recording triggers automatically as soon as your guitar signal exceeds the Start Threshold. Pressing while recording immediately stops capture and finalizes the riff."
             })
     add_box("obj_msg_arm", "newobj", "prepend /loopbro/arm", [30.0, 370.0, 130.0, 22.0])
     add_line("obj_btn_arm", 0, "obj_msg_arm", 0)
@@ -213,7 +239,9 @@ def generate_amxd():
             extra={
                 "text": "PLAY LOOP", "texton": "STOP LOOP", "mode": 1,
                 "bgoncolor": [0.2, 0.8, 0.35, 1.0],
-                "activebgoncolor": [0.2, 0.8, 0.35, 1.0]
+                "activebgoncolor": [0.2, 0.8, 0.35, 1.0],
+                "annotation_name": "Play / Stop Loop",
+                "annotation": "Starts or stops playback of the captured audio loop. Plays back seamlessly and synchronized with Ableton Live's transport."
             })
     add_box("obj_msg_play", "newobj", "prepend /loopbro/play", [100.0, 370.0, 130.0, 22.0])
     add_line("obj_btn_play", 0, "obj_msg_play", 0)
@@ -225,7 +253,9 @@ def generate_amxd():
             extra={
                 "text": "CLEAR", "mode": 0,
                 "bgcolor": [0.35, 0.16, 0.18, 1.0],
-                "textcolor": [1.0, 0.45, 0.45, 1.0]
+                "textcolor": [1.0, 0.45, 0.45, 1.0],
+                "annotation_name": "Clear Captured Loop",
+                "annotation": "Discards the currently captured audio riff buffer and returns the engine to the Idle state, freeing memory for a new take."
             })
     add_box("obj_msg_clear", "message", "/loopbro/clear", [170.0, 370.0, 95.0, 22.0])
     add_line("obj_btn_clear", 0, "obj_msg_clear", 0)
@@ -288,6 +318,8 @@ def generate_amxd():
             presentation=1, pres_rect=[10.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "annotation_name": "Start Threshold",
+                "annotation": "Sets the input audio level in dB required to trigger automatic recording when armed. Set this comfortably above ambient pickup noise and cable hum, but low enough to catch delicate picking attacks.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Start Thr",
@@ -315,6 +347,8 @@ def generate_amxd():
             presentation=1, pres_rect=[57.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "annotation_name": "Stop Threshold",
+                "annotation": "Sets the input audio drop-off level in dB that signals the end of your playing phrase. When audio falls below this level for the Stop Hold duration, recording concludes automatically.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Stop Thr",
@@ -342,6 +376,8 @@ def generate_amxd():
             presentation=1, pres_rect=[104.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "annotation_name": "Pre-Roll Buffer Time",
+                "annotation": "Amount of buffered audio (in milliseconds) captured prior to crossing the Start Threshold. Preserves the initial pick transient and attack of the first note without clipping.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Pre-Roll",
@@ -369,6 +405,8 @@ def generate_amxd():
             presentation=1, pres_rect=[151.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "annotation_name": "Stop Hold Duration",
+                "annotation": "The duration (in milliseconds) the input signal must remain below the Stop Threshold before recording stops. Prevents premature loop termination during brief rests, pauses, or ringing chord decay.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Stop Hold",
@@ -396,6 +434,8 @@ def generate_amxd():
             presentation=1, pres_rect=[198.0, 62.0, 44.0, 48.0],
             extra={
                 "parameter_enable": 1,
+                "annotation_name": "Loop Playback Level",
+                "annotation": "Adjusts playback volume (in dB) of the captured loop relative to your live guitar signal.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Loop Lvl",
@@ -426,6 +466,8 @@ def generate_amxd():
                 "bgoncolor": [0.04, 0.52, 1.0, 1.0],
                 "activebgoncolor": [0.04, 0.52, 1.0, 1.0],
                 "parameter_enable": 1,
+                "annotation_name": "Live Audio Thru",
+                "annotation": "Toggles dry input signal pass-through monitoring in the Loop Bro engine. Turn ON when monitoring directly through the plugin, or OFF when using Ableton track monitoring.",
                 "saved_attribute_attributes": {
                     "valueof": {
                         "parameter_shortname": "Live Thru",
@@ -449,7 +491,12 @@ def generate_amxd():
     # Sync Button & Loadbang
     add_box("obj_btn_sync", "live.text", "", [120.0, 640.0, 60.0, 20.0],
             presentation=1, pres_rect=[96.0, 122.0, 64.0, 22.0],
-            extra={"text": "SYNC", "mode": 0})
+            extra={
+                "text": "SYNC",
+                "mode": 0,
+                "annotation_name": "Sync with Loop Bro",
+                "annotation": "Sends an OSC query command (/loopbro/query) to request immediate synchronization of all parameter settings, engine state, and waveform data from the plugin."
+            })
     add_box("obj_loadbang", "newobj", "loadbang", [200.0, 640.0, 60.0, 22.0])
     add_box("obj_msg_query", "message", "/loopbro/query", [120.0, 670.0, 95.0, 22.0])
 
@@ -460,7 +507,13 @@ def generate_amxd():
     # OSC Port Label
     add_box("obj_lbl_ports", "live.comment", "UDP: 9001/9002", [280.0, 640.0, 100.0, 18.0],
             presentation=1, pres_rect=[166.0, 124.0, 76.0, 18.0],
-            extra={"fontname": "Ableton Sans Medium Regular", "fontsize": 9.0, "textcolor": [0.6, 0.65, 0.7, 0.7]})
+            extra={
+                "fontname": "Ableton Sans Medium Regular",
+                "fontsize": 9.0,
+                "textcolor": [0.6, 0.65, 0.7, 0.7],
+                "annotation_name": "OSC Communication Ports",
+                "annotation": "Displays the UDP network ports used for bidirectional communication with Loop Bro (Port 9001: M4L -> Plugin; Port 9002: Plugin -> M4L)."
+            })
 
     return patcher
 
