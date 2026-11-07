@@ -160,13 +160,22 @@ void OscBridge::handleArmCommand(const juce::OSCMessage& message)
     {
         const float val = getFloatOrInt(message[0]);
         if (val > 0.5f)
+        {
             engine.cmdArm();
+        }
         else
-            engine.cmdDisarm();
+        {
+            if (engine.getState() == State::Recording)
+                engine.cmdStopCaptureEarly();
+            else
+                engine.cmdDisarm();
+        }
     }
     else
     {
-        if (engine.getState() == State::Armed)
+        if (engine.getState() == State::Recording)
+            engine.cmdStopCaptureEarly();
+        else if (engine.getState() == State::Armed)
             engine.cmdDisarm();
         else
             engine.cmdArm();

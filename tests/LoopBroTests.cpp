@@ -267,6 +267,24 @@ bool testOscBridgeWorkflow()
     ASSERT_TRUE(p3 != nullptr);
     ASSERT_TRUE(p3->load() < 0.5f);
 
+    // 4. Test Early Capture Stop via OSC Disarm during Recording
+    osc->oscMessageReceived(armMsg);
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Armed);
+
+    // Trigger recording by feeding loud audio
+    inBuf.clear();
+    for (int i = 0; i < 512; ++i) inBuf.setSample(0, i, 0.8f);
+    settings.startThresholdDb = -20.0f;
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Recording);
+
+    // Disarm message while recording should finalize capture early into Captured state
+    osc->oscMessageReceived(disarmMsg);
+    inBuf.clear();
+    proc.getCaptureEngine().processBlock(inBuf, outBuf, settings);
+    ASSERT_TRUE(proc.getCaptureEngine().getState() == loopbro::State::Captured);
+
     std::cout << "[PASSED] testOscBridgeWorkflow" << std::endl;
     return true;
 }

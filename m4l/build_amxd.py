@@ -9,7 +9,6 @@ import struct
 import shutil
 
 def generate_amxd():
-    # Define Max Patcher JSON
     patcher = {
         "patcher": {
             "fileversion": 1,
@@ -21,7 +20,7 @@ def generate_amxd():
                 "modernui": 1
             },
             "classnamespace": "box",
-            "rect": [80.0, 80.0, 950.0, 720.0],
+            "rect": [80.0, 80.0, 980.0, 750.0],
             "openrect": [0.0, 0.0, 765.0, 165.0],
             "bglocked": 0,
             "openinpresentation": 1,
@@ -45,7 +44,6 @@ def generate_amxd():
     boxes = patcher["patcher"]["boxes"]
     lines = patcher["patcher"]["lines"]
 
-    # Box helpers
     def add_box(id_name, maxclass, text="", patching_rect=[0,0,100,20], presentation=0, pres_rect=[0,0,100,20], extra=None):
         box_dict = {
             "id": id_name,
@@ -99,22 +97,33 @@ def generate_amxd():
     add_box("obj_udprcv", "newobj", "udpreceive 9002", [300.0, 30.0, 105.0, 22.0], extra={"numoutlets": 1, "outlettype": [""]})
     add_box("obj_udpsnd", "newobj", "udpsend 127.0.0.1 9001", [680.0, 480.0, 135.0, 22.0])
 
-    # Route top-level /loopbro
-    add_box("obj_route_lb", "newobj", "route /loopbro", [300.0, 70.0, 100.0, 22.0], extra={"numoutlets": 2, "outlettype": ["", ""]})
-    add_line("obj_udprcv", 0, "obj_route_lb", 0)
-
-    # Sub-route addresses
-    add_box("obj_route_sub", "newobj", "route state state_name playhead meter waveform param", [300.0, 110.0, 310.0, 22.0],
-            extra={"numoutlets": 7, "outlettype": ["", "", "", "", "", "", ""]})
-    add_line("obj_route_lb", 0, "obj_route_sub", 0)
+    # Direct OSC pattern router (avoids atomic symbol split issues)
+    route_patterns = [
+        "/loopbro/state",
+        "/loopbro/playhead",
+        "/loopbro/meter",
+        "/loopbro/waveform/file",
+        "/loopbro/waveform/cleared",
+        "/loopbro/param/startThresholdDb",
+        "/loopbro/param/stopThresholdDb",
+        "/loopbro/param/preRollMs",
+        "/loopbro/param/stopHoldMs",
+        "/loopbro/param/loopGainDb",
+        "/loopbro/param/inputThru"
+    ]
+    route_cmd = "route " + " ".join(route_patterns)
+    add_box("obj_route_osc", "newobj", route_cmd, [300.0, 70.0, 620.0, 22.0],
+            extra={"numoutlets": len(route_patterns) + 1, "outlettype": [""] * (len(route_patterns) + 1)})
+    add_line("obj_udprcv", 0, "obj_route_osc", 0)
 
     # ==========================================================
     # 3. Waveform Display (buffer~ & waveform~)
     # ==========================================================
-    add_box("obj_buffer", "newobj", "buffer~ loopbro_take 1000 2", [300.0, 260.0, 160.0, 22.0])
-    add_box("obj_info", "newobj", "info~ loopbro_take", [470.0, 260.0, 120.0, 22.0], extra={"numoutlets": 8, "outlettype": ["float","float","float","float","float","float","float","float"]})
+    add_box("obj_buffer", "newobj", "buffer~ loopbro_take 1000 2", [450.0, 260.0, 160.0, 22.0])
+    add_box("obj_info", "newobj", "info~ loopbro_take", [620.0, 260.0, 120.0, 22.0],
+            extra={"numoutlets": 8, "outlettype": ["float","float","float","float","float","float","float","float"]})
 
-    add_box("obj_waveform", "waveform~", "", [300.0, 300.0, 200.0, 80.0], presentation=1, pres_rect=[254.0, 30.0, 260.0, 120.0],
+    add_box("obj_waveform", "waveform~", "", [450.0, 300.0, 200.0, 80.0], presentation=1, pres_rect=[254.0, 30.0, 260.0, 120.0],
             extra={
                 "buffername": "loopbro_take",
                 "bgcolor": [0.11, 0.12, 0.15, 1.0],
@@ -125,33 +134,23 @@ def generate_amxd():
                 "quiet": 1
             })
 
-    # Route waveform messages: "file" and "cleared"
-    add_box("obj_route_wave", "newobj", "route file cleared", [450.0, 150.0, 115.0, 22.0], extra={"numoutlets": 3, "outlettype": ["", "", ""]})
-    add_line("obj_route_sub", 4, "obj_route_wave", 0)
-
-    # Replace buffer file
+    # Outlet 3: /loopbro/waveform/file -> replace buffer
     add_box("obj_prep_read", "newobj", "prepend replace", [450.0, 190.0, 95.0, 22.0])
-    add_line("obj_route_wave", 0, "obj_prep_read", 0)
+    add_line("obj_route_osc", 3, "obj_prep_read", 0)
     add_line("obj_prep_read", 0, "obj_buffer", 0)
-    add_line("obj_prep_read", 0, "obj_info", 0) # bang info~ on reload
+    add_line("obj_prep_read", 0, "obj_info", 0)
 
-    # Clear buffer on cleared
-    add_box("obj_clear_msg", "message", "clear", [540.0, 190.0, 50.0, 22.0])
-    add_line("obj_route_wave", 1, "obj_clear_msg", 0)
+    # Outlet 4: /loopbro/waveform/cleared -> clear buffer
+    add_box("obj_clear_msg", "message", "clear", [560.0, 190.0, 50.0, 22.0])
+    add_line("obj_route_osc", 4, "obj_clear_msg", 0)
     add_line("obj_clear_msg", 0, "obj_buffer", 0)
 
-    # Playhead indicator logic:
-    # route playhead outlet (idx 2): [normPos, currentSamples, totalSamples]
-    # In waveform~: sending "line $1" where $1 is milliseconds draws a vertical line at $1 ms.
-    # total duration (ms) comes from info~ outlet 6 (0-indexed outlet 6 = duration in ms)
-    # playhead pos (ms) = normPos * durationMs
-    add_box("obj_unpack_playhead", "newobj", "unpack 0. 0 0", [380.0, 150.0, 100.0, 22.0], extra={"numoutlets": 3, "outlettype": ["float","int","int"]})
-    add_line("obj_route_sub", 2, "obj_unpack_playhead", 0)
+    # Outlet 1: /loopbro/playhead [normPos, curSamples, totSamples]
+    add_box("obj_unpack_playhead", "newobj", "unpack 0. 0 0", [380.0, 150.0, 100.0, 22.0],
+            extra={"numoutlets": 3, "outlettype": ["float","int","int"]})
+    add_line("obj_route_osc", 1, "obj_unpack_playhead", 0)
 
-    # Value storage for total duration ms (updated by info~ outlet 6)
-    add_box("obj_val_dur", "newobj", "value loopbro_dur_ms", [470.0, 300.0, 130.0, 22.0])
-    add_line("obj_info", 6, "obj_val_dur", 0)
-
+    # Store duration ms from info~ outlet 6
     add_box("obj_calc_cursor", "newobj", "expr $f1 * $f2", [380.0, 190.0, 110.0, 22.0])
     add_line("obj_unpack_playhead", 0, "obj_calc_cursor", 0)
     add_line("obj_info", 6, "obj_calc_cursor", 1)
@@ -179,13 +178,18 @@ def generate_amxd():
             extra={"fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "textcolor": [0.04, 0.85, 1.0, 0.9]})
 
     # State Status Badge
-    add_box("obj_state_badge", "live.comment", "IDLE", [200.0, 150.0, 90.0, 18.0],
+    add_box("obj_state_badge", "live.comment", "IDLE", [200.0, 190.0, 90.0, 18.0],
             presentation=1, pres_rect=[148.0, 10.0, 92.0, 18.0],
             extra={"fontname": "Ableton Sans Bold Regular", "fontsize": 10.0, "justification": 1, "textcolor": [1.0, 0.75, 0.1, 1.0]})
 
+    # Outlet 0: /loopbro/state [stateInt, stateStr]
+    add_box("obj_unpack_state", "newobj", "unpack 0 s", [200.0, 110.0, 90.0, 22.0],
+            extra={"numoutlets": 2, "outlettype": ["int", ""]})
+    add_line("obj_route_osc", 0, "obj_unpack_state", 0)
+
     # Format state name to badge
-    add_box("obj_prep_set", "newobj", "prepend set", [200.0, 190.0, 80.0, 22.0])
-    add_line("obj_route_sub", 1, "obj_prep_set", 0) # state_name outlet
+    add_box("obj_prep_set", "newobj", "prepend set", [250.0, 150.0, 80.0, 22.0])
+    add_line("obj_unpack_state", 1, "obj_prep_set", 0) # stateStr
     add_line("obj_prep_set", 0, "obj_state_badge", 0)
 
     # ==========================================================
@@ -227,46 +231,58 @@ def generate_amxd():
     add_line("obj_btn_clear", 0, "obj_msg_clear", 0)
     add_line("obj_msg_clear", 0, "obj_udpsnd", 0)
 
-    # State update to button visual sync:
-    # state 0: idle -> arm=0, play=0
-    # state 1: armed -> arm=1, play=0
-    # state 2: recording -> arm=1, play=0
-    # state 3: captured -> arm=0, play=0
-    # state 4: playing -> arm=0, play=1
-    add_box("obj_sel_state", "newobj", "select 0 1 2 3 4", [200.0, 230.0, 110.0, 22.0], extra={"numoutlets": 6, "outlettype": ["bang","bang","bang","bang","bang",""]})
-    add_line("obj_route_sub", 0, "obj_sel_state", 0) # state outlet
+    # State update router for transport buttons:
+    # 0 = Idle:      arm=0, play=0, texton="DISARM"
+    # 1 = Armed:     arm=1, play=0, texton="DISARM"
+    # 2 = Recording: arm=1, play=0, texton="STOP REC"
+    # 3 = Captured:  arm=0 (AUTO-DISARM!), play=0
+    # 4 = Playing:   arm=0, play=1
+    add_box("obj_sel_state", "newobj", "select 0 1 2 3 4", [200.0, 150.0, 110.0, 22.0],
+            extra={"numoutlets": 6, "outlettype": ["bang","bang","bang","bang","bang",""]})
+    add_line("obj_unpack_state", 0, "obj_sel_state", 0)
 
-    add_box("obj_state0", "message", "set 0", [170.0, 270.0, 40.0, 22.0])
-    add_box("obj_state1", "message", "set 1", [220.0, 270.0, 40.0, 22.0])
-
-    add_line("obj_sel_state", 0, "obj_state0", 0) # idle -> arm=0, play=0
-    add_line("obj_sel_state", 1, "obj_state1", 0) # armed -> arm=1
-    add_line("obj_sel_state", 2, "obj_state1", 0) # recording -> arm=1
-    add_line("obj_sel_state", 3, "obj_state0", 0) # captured -> arm=0, play=0
-    add_line("obj_sel_state", 4, "obj_state0", 0) # playing -> arm=0, play=1
-
-    add_line("obj_state0", 0, "obj_btn_arm", 0)
-    add_line("obj_state1", 0, "obj_btn_arm", 0)
-
-    add_box("obj_play0", "message", "set 0", [270.0, 270.0, 40.0, 22.0])
-    add_box("obj_play1", "message", "set 1", [320.0, 270.0, 40.0, 22.0])
+    # State 0 (Idle):
+    add_box("obj_arm0", "message", "set 0", [170.0, 230.0, 45.0, 22.0])
+    add_box("obj_txt_disarm", "message", "texton DISARM", [170.0, 255.0, 85.0, 22.0])
+    add_box("obj_play0", "message", "set 0", [260.0, 230.0, 45.0, 22.0])
+    add_line("obj_sel_state", 0, "obj_arm0", 0)
+    add_line("obj_sel_state", 0, "obj_txt_disarm", 0)
     add_line("obj_sel_state", 0, "obj_play0", 0)
+
+    # State 1 (Armed):
+    add_box("obj_arm1", "message", "set 1", [220.0, 230.0, 45.0, 22.0])
+    add_line("obj_sel_state", 1, "obj_txt_disarm", 0)
+    add_line("obj_sel_state", 1, "obj_arm1", 0)
     add_line("obj_sel_state", 1, "obj_play0", 0)
+
+    # State 2 (Recording):
+    add_box("obj_txt_stoprec", "message", "texton \"STOP REC\"", [220.0, 255.0, 105.0, 22.0])
+    add_line("obj_sel_state", 2, "obj_txt_stoprec", 0)
+    add_line("obj_sel_state", 2, "obj_arm1", 0)
     add_line("obj_sel_state", 2, "obj_play0", 0)
+
+    # State 3 (Captured) -> Auto-disarms ARM button!
+    add_line("obj_sel_state", 3, "obj_arm0", 0)
+    add_line("obj_sel_state", 3, "obj_txt_disarm", 0)
     add_line("obj_sel_state", 3, "obj_play0", 0)
+
+    # State 4 (Playing):
+    add_box("obj_play1", "message", "set 1", [310.0, 230.0, 45.0, 22.0])
+    add_line("obj_sel_state", 4, "obj_arm0", 0)
     add_line("obj_sel_state", 4, "obj_play1", 0)
+
+    # Wire state messages to buttons
+    add_line("obj_arm0", 0, "obj_btn_arm", 0)
+    add_line("obj_arm1", 0, "obj_btn_arm", 0)
+    add_line("obj_txt_disarm", 0, "obj_btn_arm", 0)
+    add_line("obj_txt_stoprec", 0, "obj_btn_arm", 0)
+
     add_line("obj_play0", 0, "obj_btn_play", 0)
     add_line("obj_play1", 0, "obj_btn_play", 0)
 
     # ==========================================================
     # 6. Knobs (live.dial) - Parameters
     # ==========================================================
-    # Route params
-    add_box("obj_route_params", "newobj", "route startThresholdDb stopThresholdDb preRollMs stopHoldMs loopGainDb inputThru",
-            [620.0, 150.0, 310.0, 22.0],
-            extra={"numoutlets": 7, "outlettype": ["","","","","","",""]})
-    add_line("obj_route_sub", 5, "obj_route_params", 0)
-
     # 1. Start Threshold (-80 to 0 dB, def -30)
     add_box("obj_dial_start", "live.dial", "", [30.0, 420.0, 44.0, 48.0],
             presentation=1, pres_rect=[10.0, 62.0, 44.0, 48.0],
@@ -288,8 +304,9 @@ def generate_amxd():
     add_line("obj_dial_start", 0, "obj_msg_param_start", 0)
     add_line("obj_msg_param_start", 0, "obj_udpsnd", 0)
 
-    add_box("obj_set_start", "newobj", "prepend set", [620.0, 190.0, 75.0, 22.0])
-    add_line("obj_route_params", 0, "obj_set_start", 0)
+    # Outlet 5 of obj_route_osc: startThresholdDb
+    add_box("obj_set_start", "newobj", "prepend set", [600.0, 110.0, 75.0, 22.0])
+    add_line("obj_route_osc", 5, "obj_set_start", 0)
     add_line("obj_set_start", 0, "obj_dial_start", 0)
 
     # 2. Stop Threshold (-80 to 0 dB, def -48)
@@ -313,8 +330,9 @@ def generate_amxd():
     add_line("obj_dial_stop", 0, "obj_msg_param_stop", 0)
     add_line("obj_msg_param_stop", 0, "obj_udpsnd", 0)
 
-    add_box("obj_set_stop", "newobj", "prepend set", [670.0, 190.0, 75.0, 22.0])
-    add_line("obj_route_params", 1, "obj_set_stop", 0)
+    # Outlet 6 of obj_route_osc: stopThresholdDb
+    add_box("obj_set_stop", "newobj", "prepend set", [650.0, 110.0, 75.0, 22.0])
+    add_line("obj_route_osc", 6, "obj_set_stop", 0)
     add_line("obj_set_stop", 0, "obj_dial_stop", 0)
 
     # 3. Pre-Roll (0 to 2000 ms, def 50)
@@ -338,8 +356,9 @@ def generate_amxd():
     add_line("obj_dial_preroll", 0, "obj_msg_param_preroll", 0)
     add_line("obj_msg_param_preroll", 0, "obj_udpsnd", 0)
 
-    add_box("obj_set_preroll", "newobj", "prepend set", [720.0, 190.0, 75.0, 22.0])
-    add_line("obj_route_params", 2, "obj_set_preroll", 0)
+    # Outlet 7 of obj_route_osc: preRollMs
+    add_box("obj_set_preroll", "newobj", "prepend set", [700.0, 110.0, 75.0, 22.0])
+    add_line("obj_route_osc", 7, "obj_set_preroll", 0)
     add_line("obj_set_preroll", 0, "obj_dial_preroll", 0)
 
     # 4. Stop Hold (50 to 10000 ms, def 500)
@@ -363,8 +382,9 @@ def generate_amxd():
     add_line("obj_dial_stophold", 0, "obj_msg_param_stophold", 0)
     add_line("obj_msg_param_stophold", 0, "obj_udpsnd", 0)
 
-    add_box("obj_set_stophold", "newobj", "prepend set", [770.0, 190.0, 75.0, 22.0])
-    add_line("obj_route_params", 3, "obj_set_stophold", 0)
+    # Outlet 8 of obj_route_osc: stopHoldMs
+    add_box("obj_set_stophold", "newobj", "prepend set", [750.0, 110.0, 75.0, 22.0])
+    add_line("obj_route_osc", 8, "obj_set_stophold", 0)
     add_line("obj_set_stophold", 0, "obj_dial_stophold", 0)
 
     # 5. Loop Level (-60 to +6 dB, def 0)
@@ -388,8 +408,9 @@ def generate_amxd():
     add_line("obj_dial_level", 0, "obj_msg_param_level", 0)
     add_line("obj_msg_param_level", 0, "obj_udpsnd", 0)
 
-    add_box("obj_set_level", "newobj", "prepend set", [820.0, 190.0, 75.0, 22.0])
-    add_line("obj_route_params", 4, "obj_set_level", 0)
+    # Outlet 9 of obj_route_osc: loopGainDb
+    add_box("obj_set_level", "newobj", "prepend set", [800.0, 110.0, 75.0, 22.0])
+    add_line("obj_route_osc", 9, "obj_set_level", 0)
     add_line("obj_set_level", 0, "obj_dial_level", 0)
 
     # 6. Live Thru toggle
@@ -404,8 +425,9 @@ def generate_amxd():
     add_line("obj_btn_thru", 0, "obj_msg_param_thru", 0)
     add_line("obj_msg_param_thru", 0, "obj_udpsnd", 0)
 
-    add_box("obj_set_thru", "newobj", "prepend set", [870.0, 190.0, 75.0, 22.0])
-    add_line("obj_route_params", 5, "obj_set_thru", 0)
+    # Outlet 10 of obj_route_osc: inputThru
+    add_box("obj_set_thru", "newobj", "prepend set", [850.0, 110.0, 75.0, 22.0])
+    add_line("obj_route_osc", 10, "obj_set_thru", 0)
     add_line("obj_set_thru", 0, "obj_btn_thru", 0)
 
     # Sync Button & Loadbang
